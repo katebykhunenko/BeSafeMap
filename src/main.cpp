@@ -3,6 +3,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <EEPROM.h>
+#include <ESP8266HTTPClient.h>
 
 ESP8266WebServer server(80);
 
@@ -166,6 +167,70 @@ void startSoftAP() {
   server.begin();
 }
 
+// Налаштування масива областей
+
+#define REGIONS_COUNT 130
+
+bool alertStates[REGIONS_COUNT];
+
+unsigned long lastRequest = 0;
+const unsigned long requestInterval = 10000; // 10 секунд
+
+const char* alertServerUrl = "https://192.168.1.15:8000/data";
+
+// Запит на отримання даних з нашого сервера
+
+void fetchAlertData() {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  HTTPClient http;
+  WiFiClient client;
+
+  http.begin(client, alertServerUrl);
+  int httpCode = http.GET();
+
+  if (httpCode > 0) {
+    String response = http.getString();
+
+    Serial.println("📦 Відповідь сервера:");
+    Serial.println(response);
+
+    int start = response.indexOf("\"pattern\":\"");
+    if (start == -1) {
+      Serial.println("❌ pattern не знайдено");
+      http.end();
+      return;
+    }
+
+    start += 11;
+    int end = response.indexOf("\"", start);
+
+    String pattern = response.substring(start, end);
+
+    int len = pattern.length();
+    if (len > REGIONS_COUNT) {
+      len = REGIONS_COUNT;
+    }
+
+    for (int i = 0; i < len; i++) {
+      char c = pattern.charAt(i);
+      alertStates[i] = (c == 'A') ? 1 : 0;
+    }
+
+    Serial.print("🧠 Стани: ");
+    for (int i = 0; i < REGIONS_COUNT; i++) {
+      Serial.print(alertStates[i]);
+    }
+    Serial.println();
+
+  } else {
+    Serial.println("❌ HTTP помилка");
+  }
+
+  http.end();
+}
+
+
 void setup() {
   Serial.begin(9600);
   delay(1000);
@@ -207,5 +272,14 @@ void setup() {
 }
 
 void loop() {
-  server.handleClient();
+  server.handleClient(); // працює тільки якщо Soft-AP
+
+  if (WiFi.status() == WL_CONNECTED) {
+    if (millis() - lastRequest >= requestInterval) {
+      lastRequest = millis();
+      fetchAlertData();
+    }
+  }
 }
+
+
