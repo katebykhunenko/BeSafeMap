@@ -125,25 +125,6 @@ void handleRoot() {
   server.send(200, "text/html", html);
 }
 
-void SavePage() {
-  // тут зчитуєш ssid і pass з POST
-  String ssid = server.arg("ssid");
-  String pass = server.arg("pass");
-  // зберігаєш у EEPROM і запускаєш підключення до Wi-Fi
-
-  String html =
-"<html><head>"
-"<meta charset='UTF-8'>"
-"<meta name='viewport' content='width=device-width, initial-scale=1'>"
-"</head><body>"
-"<h2>✅ Дані збережено</h2>"
-"<p>Плата намагається підключитись до Wi-Fi</p>"
-"<p>Якщо підключення буде успішним — Soft-AP зникне</p>"
-"</body></html>";
-
-  server.send(200, "text/html; charset=utf-8", html);
-}
-
 void handleSave() {
   wifiSSID = server.arg("ssid");
   wifiPassword = server.arg("pass");
