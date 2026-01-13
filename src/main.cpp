@@ -19,7 +19,7 @@ String wifiSSID;
 String wifiPassword;
 
 bool alertStates[REGIONS_COUNT];
-unsigned long lastRequest = 0;
+uint32_t lastRequest = 0;
 
 ESP8266WebServer server(80);
 
@@ -136,7 +136,7 @@ void handleSave() {
   EEPROM.begin(96);
   for (int i = 0; i < 32; i++) EEPROM.write(i, i < wifiSSID.length() ? wifiSSID[i] : 0);
   for (int i = 0; i < 32; i++) EEPROM.write(32 + i, i < wifiPassword.length() ? wifiPassword[i] : 0);
-  EEPROM.commit(); // дуже важливо!
+  EEPROM.commit();
 
   Serial.print("EEPROM після запису SSID: ");
   for(int i=0;i<32;i++) Serial.print((char)EEPROM.read(i));
@@ -156,7 +156,7 @@ void fetchAlertData() {
   http.begin(client, alertServerUrl);
   int httpCode = http.GET();
 
-  if (httpCode > 0) {
+  if (httpCode == 200) {
     String response = http.getString();
 
     Serial.println("📦 Відповідь сервера:");
@@ -214,7 +214,6 @@ void startSoftAP() {
 
 void setup() {
   Serial.begin(9600);
-  delay(1000);
 
   Serial.println("\n--- ESP8266 START ---");
 
