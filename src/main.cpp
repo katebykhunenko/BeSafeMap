@@ -57,6 +57,7 @@ void clearEEPROM() {
 }
 
 // ---------- WEB ----------
+// WIFI settings page
 void handleRoot() {
   String html =
 "<html><head>"
