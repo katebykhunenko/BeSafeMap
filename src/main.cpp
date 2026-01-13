@@ -140,8 +140,8 @@ void handleSave() {
   #endif
 
   EEPROM.begin(96);
-  for (int i = 0; i < 32; i++) EEPROM.write(i, i < wifiSSID.length() ? wifiSSID[i] : 0);
-  for (int i = 0; i < 32; i++) EEPROM.write(32 + i, i < wifiPassword.length() ? wifiPassword[i] : 0);
+  for (uint i = 0; i < 32; i++) EEPROM.write(i, i < wifiSSID.length() ? wifiSSID[i] : 0);
+  for (uint i = 0; i < 32; i++) EEPROM.write(32 + i, i < wifiPassword.length() ? wifiPassword[i] : 0);
   EEPROM.commit();
 
   #ifdef DEBUG
