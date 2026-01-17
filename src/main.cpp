@@ -7,6 +7,8 @@
 
 
 // ========== DEFINES & SETTINGS ==========
+//#define DEBUG // uncomment to enable debug mode
+
 #define REGIONS_COUNT 130
 #define REQUEST_INTERVAL 10000 // 10 секунд
 const char* alertServerUrl = "https://192.168.1.15:8000/data";
@@ -53,7 +55,9 @@ void clearEEPROM() {
     EEPROM.write(i, 0);
   }
   EEPROM.commit();
+  #ifdef DEBUG
   Serial.println("🧹 EEPROM очищено!");
+  #endif
 }
 
 // ---------- WEB ----------
@@ -129,18 +133,22 @@ void handleSave() {
   wifiSSID = server.arg("ssid");
   wifiPassword = server.arg("pass");
 
+  #ifdef DEBUG
   Serial.println("\n📥 Отримано Wi-Fi дані:");
   Serial.print("SSID: "); Serial.println(wifiSSID);
   Serial.print("Password: "); Serial.println(wifiPassword);
+  #endif
 
   EEPROM.begin(96);
   for (int i = 0; i < 32; i++) EEPROM.write(i, i < wifiSSID.length() ? wifiSSID[i] : 0);
   for (int i = 0; i < 32; i++) EEPROM.write(32 + i, i < wifiPassword.length() ? wifiPassword[i] : 0);
   EEPROM.commit();
 
+  #ifdef DEBUG
   Serial.print("EEPROM після запису SSID: ");
   for(int i=0;i<32;i++) Serial.print((char)EEPROM.read(i));
   Serial.println();
+  #endif
 
   server.send(200, "text/html", "<h2>Збережено! Плата перезавантажується…</h2>");
   delay(2000);
@@ -159,12 +167,16 @@ void fetchAlertData() {
   if (httpCode == 200) {
     String response = http.getString();
 
+    #ifdef DEBUG
     Serial.println("📦 Відповідь сервера:");
     Serial.println(response);
+    #endif
 
     int start = response.indexOf("\"pattern\":\"");
     if (start == -1) {
+      #ifdef DEBUG
       Serial.println("❌ pattern не знайдено");
+      #endif
       http.end();
       return;
     }
@@ -184,15 +196,19 @@ void fetchAlertData() {
       alertStates[i] = (c == 'A') ? 1 : 0;
     }
 
+    #ifdef DEBUG
     Serial.print("🧠 Стани: ");
     for (int i = 0; i < REGIONS_COUNT; i++) {
       Serial.print(alertStates[i]);
     }
     Serial.println();
-
-  } else {
+    #endif
+  } 
+  #ifdef DEBUG
+  else {
     Serial.println("❌ HTTP помилка");
   }
+  #endif
 
   http.end();
 }
@@ -202,9 +218,11 @@ void startSoftAP() {
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ap_ssid, ap_password);
 
+  #ifdef DEBUG
   Serial.println("❗ Запущено Soft-AP для введення Wi-Fi");
   Serial.print("📡 SSID: "); Serial.println(ap_ssid);
   Serial.println("🌐 Відкрий у браузері: 192.168.4.1");
+  #endif
 
   server.on("/", handleRoot);
   server.on("/save", handleSave);
@@ -213,31 +231,34 @@ void startSoftAP() {
 
 
 void setup() {
+  #ifdef DEBUG
   Serial.begin(9600);
-
   Serial.println("\n--- ESP8266 START ---");
+  #endif
 
   readWiFiFromEEPROM();
 
-  if (wifiSSID.length() == 0 || wifiPassword.length() == 0) {
-    // EEPROM порожній → Soft-AP
+  if (wifiSSID.length() == 0 || wifiPassword.length() == 0) { // EEPROM порожній → Soft-AP
     startSoftAP();
-  } else {
-    // Підключаємося до Wi-Fi
+  } else { // Підключаємося до Wi-Fi
+    #ifdef DEBUG
     Serial.println("🔐 Знайдено Wi-Fi дані");
     Serial.print("SSID: "); Serial.println(wifiSSID);
+    Serial.print("🔄 Підключення до Wi-Fi");
+    #endif
 
     WiFi.mode(WIFI_STA);
     WiFi.begin(wifiSSID.c_str(), wifiPassword.c_str());
 
-    Serial.print("🔄 Підключення до Wi-Fi");
-
     unsigned long start = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - start < 30000) { // timeout 30 сек
       delay(500);
+      #ifdef DEBUG
       Serial.print(".");
+      #endif
     }
 
+    #ifdef DEBUG
     if (WiFi.status() == WL_CONNECTED) {
       Serial.println("\n✅ Wi-Fi підключено!");
       Serial.print("📍 IP адреса: ");
@@ -248,6 +269,13 @@ void setup() {
       delay(500);
       startSoftAP();
     }
+    #else
+    if (WiFi.status() != WL_CONNECTED) {
+      clearEEPROM();
+      delay(500);
+      startSoftAP();
+    }
+    #endif
   }
 }
 
