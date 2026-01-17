@@ -19,7 +19,7 @@ String wifiSSID;
 String wifiPassword;
 
 bool alertStates[REGIONS_COUNT];
-unsigned long lastRequest = 0;
+uint32_t lastRequest = 0;
 
 ESP8266WebServer server(80);
 
@@ -57,6 +57,7 @@ void clearEEPROM() {
 }
 
 // ---------- WEB ----------
+// WIFI settings page
 void handleRoot() {
   String html =
 "<html><head>"
@@ -124,25 +125,6 @@ void handleRoot() {
   server.send(200, "text/html", html);
 }
 
-void SavePage() {
-  // тут зчитуєш ssid і pass з POST
-  String ssid = server.arg("ssid");
-  String pass = server.arg("pass");
-  // зберігаєш у EEPROM і запускаєш підключення до Wi-Fi
-
-  String html =
-"<html><head>"
-"<meta charset='UTF-8'>"
-"<meta name='viewport' content='width=device-width, initial-scale=1'>"
-"</head><body>"
-"<h2>✅ Дані збережено</h2>"
-"<p>Плата намагається підключитись до Wi-Fi</p>"
-"<p>Якщо підключення буде успішним — Soft-AP зникне</p>"
-"</body></html>";
-
-  server.send(200, "text/html; charset=utf-8", html);
-}
-
 void handleSave() {
   wifiSSID = server.arg("ssid");
   wifiPassword = server.arg("pass");
@@ -154,7 +136,7 @@ void handleSave() {
   EEPROM.begin(96);
   for (int i = 0; i < 32; i++) EEPROM.write(i, i < wifiSSID.length() ? wifiSSID[i] : 0);
   for (int i = 0; i < 32; i++) EEPROM.write(32 + i, i < wifiPassword.length() ? wifiPassword[i] : 0);
-  EEPROM.commit(); // дуже важливо!
+  EEPROM.commit();
 
   Serial.print("EEPROM після запису SSID: ");
   for(int i=0;i<32;i++) Serial.print((char)EEPROM.read(i));
@@ -174,7 +156,7 @@ void fetchAlertData() {
   http.begin(client, alertServerUrl);
   int httpCode = http.GET();
 
-  if (httpCode > 0) {
+  if (httpCode == 200) {
     String response = http.getString();
 
     Serial.println("📦 Відповідь сервера:");
@@ -232,7 +214,6 @@ void startSoftAP() {
 
 void setup() {
   Serial.begin(9600);
-  delay(1000);
 
   Serial.println("\n--- ESP8266 START ---");
 
