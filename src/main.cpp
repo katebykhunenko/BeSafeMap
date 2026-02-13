@@ -4,11 +4,10 @@
 #include <ESP8266WebServer.h>
 #include <EEPROM.h>
 #include <ESP8266HTTPClient.h>
-#include <FastLED.h>
 
 
 // ========== DEFINES & SETTINGS ==========
-//#define DEBUG // uncomment to enable debug mode
+#define DEBUG // uncomment to enable debug mode
 
 // ---------- Pins -----------
 #define LED_PIN 2 //GPIO2 aka D4
@@ -16,7 +15,7 @@
 // ---------- Settings
 #define REGIONS_COUNT 130 // aka LED's count
 #define REQUEST_INTERVAL 10000 // 10 секунд
-const char* alertServerUrl = "https://192.168.1.15:8000/data";
+const char* alertServerUrl = "https://10.0.1.41:8000/data";
 const char* ap_ssid = "AlertMap_Setup";
 const char* ap_password = "12345678";
 
@@ -30,7 +29,6 @@ uint32_t lastRequest = 0;
 
 ESP8266WebServer server(80);
 
-CRGB leds[REGIONS_COUNT];
 
 
 // ========== DEFINITIONS ==========
@@ -236,13 +234,26 @@ void startSoftAP() {
   server.begin();
 }
 
-// ---------- LEDS ----------
-void fillCollor(uint8_t R, uint8_t G, uint8_t B) {
+
+// ---------- LEDS + JSON ----------
+void MapColorUpdate() {
   for (int i = 0; i < REGIONS_COUNT; i++) {
-    leds[i].setRGB(R, G, B);
+    Serial.print(alertStates[i]);
   }
+  Serial.println();
+  /*
+  for (int i = 0; i < REGIONS_COUNT; i++) {
+    if (alertStates[i] == 1) {
+      leds[i].setRGB(255, 0, 0);
+    }
+    else if (alertStates[i] == 0) {
+      leds[i].setRGB(0, 255, 0);
+    }
+    }
   FastLED.show();
+*/
 }
+
 
 void setup() {
   #ifdef DEBUG
@@ -250,10 +261,9 @@ void setup() {
   Serial.println("\n--- ESP8266 START ---");
   #endif
 
-  FastLED.addLeds<WS2815, LED_PIN, GRB>(leds, REGIONS_COUNT);
-  FastLED.setBrightness(50);
+  //FastLED.addLeds<WS2815, LED_PIN, GRB>(leds, REGIONS_COUNT);
+  //FastLED.setBrightness(50);
 
-  fillCollor(255, 255, 0);
 
   readWiFiFromEEPROM();
 
@@ -305,6 +315,7 @@ void loop() {
     if (millis() - lastRequest >= REQUEST_INTERVAL) {
       lastRequest = millis();
       fetchAlertData();
+      MapColorUpdate();
     }
   }
 }
