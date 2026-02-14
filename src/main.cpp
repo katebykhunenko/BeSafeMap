@@ -244,6 +244,17 @@ void fillCollor(uint8_t R, uint8_t G, uint8_t B) {
   FastLED.show();
 }
 
+void MapColorUpdate() {
+  for (int i = 0; i < REGIONS_COUNT; i++) {
+    if (alertStates[i]) {
+      leds[i].setRGB(255, 0, 0);
+    } else {
+      leds[i].setRGB(0, 255, 0);
+    }
+  }
+  FastLED.show();
+}
+
 void setup() {
   #ifdef DEBUG
   Serial.begin(9600);
@@ -305,6 +316,7 @@ void loop() {
     if (millis() - lastRequest >= REQUEST_INTERVAL) {
       lastRequest = millis();
       fetchAlertData();
+      MapColorUpdate();
     }
   }
 }
