@@ -4,19 +4,19 @@
 #include <ESP8266WebServer.h>
 #include <EEPROM.h>
 #include <ESP8266HTTPClient.h>
-#include <FastLED.h>
+#include <Adafruit_NeoPixel.h>
 
 
 // ========== DEFINES & SETTINGS ==========
-//#define DEBUG // uncomment to enable debug mode
+#define DEBUG // uncomment to enable debug mode
 
 // ---------- Pins -----------
-#define LED_PIN 2 //GPIO2 aka D4
+#define LED_PIN D7 // D7
 
 // ---------- Settings
-#define REGIONS_COUNT 130 // aka LED's count
+#define REGIONS_COUNT 13 // aka LED's count
 #define REQUEST_INTERVAL 10000 // 10 секунд
-const char* alertServerUrl = "https://192.168.1.15:8000/data";
+const char* alertServerUrl = "http://10.99.160.177:8000/data";
 const char* ap_ssid = "AlertMap_Setup";
 const char* ap_password = "12345678";
 
@@ -30,7 +30,7 @@ uint32_t lastRequest = 0;
 
 ESP8266WebServer server(80);
 
-CRGB leds[REGIONS_COUNT];
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(REGIONS_COUNT, LED_PIN, NEO_GRB + NEO_KHZ400);
 
 
 // ========== DEFINITIONS ==========
@@ -239,9 +239,22 @@ void startSoftAP() {
 // ---------- LEDS ----------
 void fillCollor(uint8_t R, uint8_t G, uint8_t B) {
   for (int i = 0; i < REGIONS_COUNT; i++) {
-    leds[i].setRGB(R, G, B);
+    strip.setPixelColor(i, strip.Color(R, G, B));
   }
-  FastLED.show();
+  strip.show();
+}
+
+void MapColorUpdate() {
+  for (int i = 0; i < REGIONS_COUNT; i++) {
+    if (alertStates[i] == 1) {
+      strip.setPixelColor(i, 0xff0000);
+    }
+    else if (alertStates[i] == 0) {
+      strip.setPixelColor(i, 0x00ff00);
+    }
+    }
+    Serial.println("Send");
+  strip.show();
 }
 
 void setup() {
@@ -250,9 +263,8 @@ void setup() {
   Serial.println("\n--- ESP8266 START ---");
   #endif
 
-  FastLED.addLeds<WS2815, LED_PIN, GRB>(leds, REGIONS_COUNT);
-  FastLED.setBrightness(50);
-
+  strip.begin();
+  strip.setBrightness(50);
   fillCollor(255, 255, 0);
 
   readWiFiFromEEPROM();
@@ -305,6 +317,7 @@ void loop() {
     if (millis() - lastRequest >= REQUEST_INTERVAL) {
       lastRequest = millis();
       fetchAlertData();
+      MapColorUpdate();
     }
   }
 }
