@@ -8,15 +8,15 @@
 
 
 // ========== DEFINES & SETTINGS ==========
-#define DEBUG // uncomment to enable debug mode
+//#define DEBUG // uncomment to enable debug mode
 
 // ---------- Pins -----------
 #define LED_PIN D7 // D7
 
 // ---------- Settings
-#define REGIONS_COUNT 13 // aka LED's count
+#define REGIONS_COUNT 130 // aka LED's count
 #define REQUEST_INTERVAL 10000 // 10 секунд
-const char* alertServerUrl = "http://10.99.160.177:8000/data";
+const char* alertServerUrl = "http://10.0.1.41:8000/data";
 const char* ap_ssid = "AlertMap_Setup";
 const char* ap_password = "12345678";
 
@@ -264,8 +264,8 @@ void setup() {
   #endif
 
   strip.begin();
-  strip.setBrightness(50);
-  fillCollor(255, 255, 0);
+  strip.setBrightness(255);
+  fillCollor(0, 0, 255);
 
   readWiFiFromEEPROM();
 
