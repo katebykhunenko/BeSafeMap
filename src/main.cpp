@@ -262,17 +262,6 @@ void MapColorUpdate() {
   strip.show();
 }
 
-void MapColorUpdate() {
-  for (int i = 0; i < REGIONS_COUNT; i++) {
-    if (alertStates[i]) {
-      leds[i].setRGB(255, 0, 0);
-    } else {
-      leds[i].setRGB(0, 255, 0);
-    }
-  }
-  FastLED.show();
-}
-
 void setup() {
   #ifdef DEBUG
   Serial.begin(9600);
@@ -340,5 +329,3 @@ void loop() {
     }
   }
 }
-
-
