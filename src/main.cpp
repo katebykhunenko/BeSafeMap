@@ -2,6 +2,7 @@
 // ========== INCLUDES ==========
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
+#include <DNSServer.h>
 #include <EEPROM.h>
 #include <ESP8266HTTPClient.h>
 #include <Adafruit_NeoPixel.h>
@@ -17,8 +18,9 @@
 #define REGIONS_COUNT 130 // aka LED's count
 #define REQUEST_INTERVAL 10000 // 10 секунд
 const char* alertServerUrl = "http://10.0.1.41:8000/data";
-const char* ap_ssid = "AlertMap_Setup";
+const char* ap_ssid = "BeSafeMap";
 const char* ap_password = "12345678";
+const byte DNS_PORT = 53;
 
 
 // ========== VARIABLES ==========
@@ -29,6 +31,7 @@ bool alertStates[REGIONS_COUNT];
 uint32_t lastRequest = 0;
 
 ESP8266WebServer server(80);
+DNSServer dnsserver;
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(REGIONS_COUNT, LED_PIN, NEO_GRB + NEO_KHZ400);
 
@@ -225,10 +228,12 @@ void startSoftAP() {
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ap_ssid, ap_password);
 
+  dnsserver.start(DNS_PORT, "*", WiFi.softAPIP());
+
   #ifdef DEBUG
   Serial.println("❗ Запущено Soft-AP для введення Wi-Fi");
   Serial.print("📡 SSID: "); Serial.println(ap_ssid);
-  Serial.println("🌐 Відкрий у браузері: 192.168.4.1");
+  Serial.print("🌐 Відкрий у браузері: "); Serial.println(WiFi.softAPIP());
   #endif
 
   server.on("/", handleRoot);
@@ -311,7 +316,10 @@ void setup() {
 }
 
 void loop() {
-  server.handleClient(); // працює тільки якщо Soft-AP
+  if (WiFi.getMode() == WIFI_AP | WIFI_AP_STA){
+    dnsserver.processNextRequest();
+    server.handleClient();
+  }
 
   if (WiFi.status() == WL_CONNECTED) {
     if (millis() - lastRequest >= REQUEST_INTERVAL) {
