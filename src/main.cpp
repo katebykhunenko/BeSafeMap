@@ -2,23 +2,25 @@
 // ========== INCLUDES ==========
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
+#include <DNSServer.h>
 #include <EEPROM.h>
 #include <ESP8266HTTPClient.h>
-#include <FastLED.h>
+#include <Adafruit_NeoPixel.h>
 
 
 // ========== DEFINES & SETTINGS ==========
 //#define DEBUG // uncomment to enable debug mode
 
 // ---------- Pins -----------
-#define LED_PIN 2 //GPIO2 aka D4
+#define LED_PIN D7 // D7
 
 // ---------- Settings
 #define REGIONS_COUNT 130 // aka LED's count
 #define REQUEST_INTERVAL 10000 // 10 секунд
-const char* alertServerUrl = "https://192.168.1.15:8000/data";
-const char* ap_ssid = "AlertMap_Setup";
+const char* alertServerUrl = "http://10.0.1.41:8000/data";
+const char* ap_ssid = "BeSafeMap";
 const char* ap_password = "12345678";
+const byte DNS_PORT = 53;
 
 
 // ========== VARIABLES ==========
@@ -29,8 +31,9 @@ bool alertStates[REGIONS_COUNT];
 uint32_t lastRequest = 0;
 
 ESP8266WebServer server(80);
+DNSServer dnsserver;
 
-CRGB leds[REGIONS_COUNT];
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(REGIONS_COUNT, LED_PIN, NEO_GRB + NEO_KHZ400);
 
 
 // ========== DEFINITIONS ==========
@@ -225,10 +228,12 @@ void startSoftAP() {
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ap_ssid, ap_password);
 
+  dnsserver.start(DNS_PORT, "*", WiFi.softAPIP());
+
   #ifdef DEBUG
   Serial.println("❗ Запущено Soft-AP для введення Wi-Fi");
   Serial.print("📡 SSID: "); Serial.println(ap_ssid);
-  Serial.println("🌐 Відкрий у браузері: 192.168.4.1");
+  Serial.print("🌐 Відкрий у браузері: "); Serial.println(WiFi.softAPIP());
   #endif
 
   server.on("/", handleRoot);
@@ -239,9 +244,22 @@ void startSoftAP() {
 // ---------- LEDS ----------
 void fillCollor(uint8_t R, uint8_t G, uint8_t B) {
   for (int i = 0; i < REGIONS_COUNT; i++) {
-    leds[i].setRGB(R, G, B);
+    strip.setPixelColor(i, strip.Color(R, G, B));
   }
-  FastLED.show();
+  strip.show();
+}
+
+void MapColorUpdate() {
+  for (int i = 0; i < REGIONS_COUNT; i++) {
+    if (alertStates[i] == 1) {
+      strip.setPixelColor(i, 0xff0000);
+    }
+    else if (alertStates[i] == 0) {
+      strip.setPixelColor(i, 0x00ff00);
+    }
+    }
+    Serial.println("Send");
+  strip.show();
 }
 
 void MapColorUpdate() {
@@ -261,10 +279,9 @@ void setup() {
   Serial.println("\n--- ESP8266 START ---");
   #endif
 
-  FastLED.addLeds<WS2815, LED_PIN, GRB>(leds, REGIONS_COUNT);
-  FastLED.setBrightness(50);
-
-  fillCollor(255, 255, 0);
+  strip.begin();
+  strip.setBrightness(255);
+  fillCollor(0, 0, 255);
 
   readWiFiFromEEPROM();
 
@@ -310,7 +327,10 @@ void setup() {
 }
 
 void loop() {
-  server.handleClient(); // працює тільки якщо Soft-AP
+  if (WiFi.getMode() == WIFI_AP | WIFI_AP_STA){
+    dnsserver.processNextRequest();
+    server.handleClient();
+  }
 
   if (WiFi.status() == WL_CONNECTED) {
     if (millis() - lastRequest >= REQUEST_INTERVAL) {
