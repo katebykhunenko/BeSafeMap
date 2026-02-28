@@ -15,12 +15,23 @@
 #define LED_PIN D7 // D7
 
 // ---------- Settings
-#define REGIONS_COUNT 130 // aka LED's count
+#define REGIONS_COUNT 130
+#define LED_COUNT 12
 #define REQUEST_INTERVAL 10000 // 10 секунд
 const char* alertServerUrl = "http://10.0.1.41:8000/data";
 const char* ap_ssid = "BeSafeMap";
 const char* ap_password = "12345678";
 const byte DNS_PORT = 53;
+const uint8_t ledMap[LED_COUNT] = {
+  73, 73,
+  76,
+  78, 78,
+  79, 79,
+  31,
+  77,
+  75,
+  74, 74
+};
 
 
 // ========== VARIABLES ==========
@@ -33,7 +44,7 @@ uint32_t lastRequest = 0;
 ESP8266WebServer server(80);
 DNSServer dnsserver;
 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(REGIONS_COUNT, LED_PIN, NEO_GRB + NEO_KHZ400);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ400);
 
 
 // ========== DEFINITIONS ==========
@@ -243,22 +254,20 @@ void startSoftAP() {
 
 // ---------- LEDS ----------
 void fillCollor(uint8_t R, uint8_t G, uint8_t B) {
-  for (int i = 0; i < REGIONS_COUNT; i++) {
+  for (int i = 0; i < LED_COUNT; i++) {
     strip.setPixelColor(i, strip.Color(R, G, B));
   }
   strip.show();
 }
 
 void MapColorUpdate() {
-  for (int i = 0; i < REGIONS_COUNT; i++) {
-    if (alertStates[i] == 1) {
+  for (int i = 0; i < LED_COUNT; i++) {
+    if (alertStates[ledMap[i]] == 1) {
       strip.setPixelColor(i, 0xff0000);
-    }
-    else if (alertStates[i] == 0) {
+    } else {
       strip.setPixelColor(i, 0x00ff00);
     }
-    }
-    Serial.println("Send");
+  }
   strip.show();
 }
 
