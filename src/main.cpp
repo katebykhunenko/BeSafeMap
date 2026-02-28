@@ -41,6 +41,9 @@ String wifiPassword;
 bool alertStates[REGIONS_COUNT];
 uint32_t lastRequest = 0;
 
+uint8_t SystemState;
+uint8_t NetState; // 0 - normal, 1 - AP/config, 2 - not connected, 3 - lost, 255 - fail
+
 ESP8266WebServer server(80);
 DNSServer dnsserver;
 
@@ -234,7 +237,7 @@ void fetchAlertData() {
   http.end();
 }
 
-// ---------- Soft-AP запуск ----------
+// ---------- WiFi ----------
 void startSoftAP() {
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ap_ssid, ap_password);
@@ -250,6 +253,25 @@ void startSoftAP() {
   server.on("/", handleRoot);
   server.on("/save", handleSave);
   server.begin();
+}
+
+void SysStateFetch() {
+  if (WiFi.getMode() != WIFI_AP) {
+    switch (WiFi.status()) {
+    case WL_CONNECTED:
+      NetState = 0;
+      break;
+    case WL_CONNECTION_LOST:
+      NetState = 3;
+      break;
+    case WL_DISCONNECTED:
+      NetState = 2;
+      break;
+    default:
+      NetState = 255;
+      break;
+    }
+  } else NetState = 1;
 }
 
 // ---------- LEDS ----------
@@ -269,6 +291,9 @@ void MapColorUpdate() {
     }
   }
   strip.show();
+}
+
+void showSysState(){ //TODO: made this to show sys state
 }
 
 void setup() {
@@ -325,16 +350,15 @@ void setup() {
 }
 
 void loop() {
-  if (WiFi.getMode() == WIFI_AP | WIFI_AP_STA){
-    dnsserver.processNextRequest();
-    server.handleClient();
-  }
-
-  if (WiFi.status() == WL_CONNECTED) {
+  SysStateFetch();
+  if (NetState == 0) {
     if (millis() - lastRequest >= REQUEST_INTERVAL) {
       lastRequest = millis();
       fetchAlertData();
       MapColorUpdate();
     }
+  } else if (NetState == 1) {
+    dnsserver.processNextRequest();
+    server.handleClient();
   }
 }
