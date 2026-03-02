@@ -42,6 +42,7 @@ uint32_t lastRequest = 0;
 
 uint8_t SystemState;
 uint8_t NetState; // 0 - normal, 1 - AP/config, 2 - not connected, 3 - lost, 255 - fail
+bool DemoState = 1;
 
 ESP8266WebServer server(80);
 DNSServer dnsserver;
@@ -194,6 +195,7 @@ void fetchAlertData() {
     for (int i = 0; i < len; i++) {
       char c = pattern.charAt(i);
       alertStates[i] = (c == 'A') ? 1 : 0;
+      if (alertStates[i]) DemoState == 0;
     }
   }
   http.end();
@@ -249,6 +251,17 @@ void MapColorUpdate() {
   strip.show();
 }
 
+void showDemo() {
+  for (int i = 0; i < LED_COUNT; i++) {
+    if (alertStates[ledMap[i]] == 1) {
+      strip.setPixelColor(i, 0xff0000);
+    } else {
+      strip.setPixelColor(i, 0x00ff00);
+    }
+  }
+  strip.show();
+}
+
 void showSysState(){ //TODO: made this to show sys state
 }
 
@@ -283,7 +296,9 @@ void loop() {
     if (millis() - lastRequest >= REQUEST_INTERVAL) {
       lastRequest = millis();
       fetchAlertData();
-      MapColorUpdate();
+      if (DemoState) {
+        showDemo();
+      } else MapColorUpdate();
     }
   } else if (NetState == 1) {
     dnsserver.processNextRequest();
