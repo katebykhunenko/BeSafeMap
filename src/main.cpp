@@ -38,7 +38,9 @@ String wifiSSID;
 String wifiPassword;
 
 bool alertStates[REGIONS_COUNT];
+bool alertStatedDemo[8];
 uint32_t lastRequest = 0;
+uint32_t someTimer = 0;
 
 uint8_t SystemState;
 uint8_t NetState; // 0 - normal, 1 - AP/config, 2 - not connected, 3 - lost, 255 - fail
@@ -51,6 +53,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, NEO_GRB + NEO_KH
 
 
 // ========== DEFINITIONS ==========
+void fillCollor(uint8_t R, uint8_t G, uint8_t B);
 
 
 // ========== DECLARATIONS ==========
@@ -83,8 +86,7 @@ void clearEEPROM() {
 
 // ---------- WEB ----------
 // WIFI settings page
-void handleRoot() {
-  String html =
+String MainHtml =
 "<html><head>"
 "<meta charset='UTF-8'>"
 "<meta name='viewport' content='width=device-width, initial-scale=1'>"
@@ -146,8 +148,8 @@ void handleRoot() {
 
 "</div>"
 "</body></html>";
-
-  server.send(200, "text/html", html);
+void handleRoot() {
+  server.send(200, "text/html", MainHtml);
 }
 
 void handleSave() {
@@ -195,18 +197,22 @@ void fetchAlertData() {
     for (int i = 0; i < len; i++) {
       char c = pattern.charAt(i);
       alertStates[i] = (c == 'A') ? 1 : 0;
-      if (alertStates[i]) DemoState == 0;
     }
+    if (alertStates[35]) DemoState = 0;
   }
   http.end();
 }
 
 // ---------- WiFi ----------
 void startSoftAP() {
+  fillCollor(0, 255, 0);
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ap_ssid, ap_password);
 
   dnsserver.start(DNS_PORT, "*", WiFi.softAPIP());
+  server.onNotFound([]() {
+    server.send(200, "text/html", MainHtml);
+  });
 
   server.on("/", handleRoot);
   server.on("/save", handleSave);
@@ -252,11 +258,17 @@ void MapColorUpdate() {
 }
 
 void showDemo() {
-  for (int i = 0; i < LED_COUNT; i++) {
-    if (alertStates[ledMap[i]] == 1) {
-      strip.setPixelColor(i, 0xff0000);
-    } else {
-      strip.setPixelColor(i, 0x00ff00);
+  if (millis() - someTimer >= 10000) {
+    someTimer = millis();
+    for (int i = 0; i < REGIONS_COUNT; i++) {
+      alertStatedDemo[i] = random(0, 2);
+    }
+    for (int i = 0; i < LED_COUNT; i++) {
+      if (alertStatedDemo[ledMap[i]] == 1) {
+        strip.setPixelColor(i, 0xff0010);
+      } else {
+        strip.setPixelColor(i, 0x00ff10);
+      }
     }
   }
   strip.show();
@@ -278,10 +290,12 @@ void setup() {
     WiFi.mode(WIFI_STA);
     WiFi.begin(wifiSSID.c_str(), wifiPassword.c_str());
 
+    fillCollor(255, 255 , 0);
     unsigned long start = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - start < 30000) { // timeout 30 сек
       delay(500);
     }
+    fillCollor(0, 0, 255);
     if (WiFi.status() != WL_CONNECTED) {
       clearEEPROM();
       delay(500);
