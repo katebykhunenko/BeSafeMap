@@ -17,7 +17,8 @@
 #define REGIONS_COUNT 130
 #define LED_COUNT 369
 #define REQUEST_INTERVAL 10000 // 10 секунд
-const char* alertServerUrl = "http://10.89.214.177:8000/data";
+#define BRIGHTNESS 200
+const char* alertServerUrl = "http://192.168.0.145:8000/data";
 const char* ap_ssid = "BeSafeMap";
 const char* ap_password = "12345678";
 const byte DNS_PORT = 53;
@@ -158,17 +159,18 @@ String wifiSSID;
 String wifiPassword;
 
 bool alertStates[REGIONS_COUNT];
-bool alertStatedDemo[8];
 uint32_t lastRequest = 0;
-uint32_t someTimer = 0;
+uint32_t fadeTimer = 0;
 
 uint8_t SystemState;
 uint8_t NetState; // 0 - normal, 1 - AP/config, 2 - not connected, 3 - lost, 255 - fail
-bool DemoState = 1;
+uint8_t FetchErrCount = 0;
+boolean apiState = 1;
 
 ESP8266WebServer server(80);
 DNSServer dnsserver;
 
+uint8_t brightness = BRIGHTNESS;
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ400);
 
 
@@ -286,8 +288,8 @@ void handleSave() {
   ESP.restart();
 }
 
-void fetchAlertData() {
-  if (WiFi.status() != WL_CONNECTED) return;
+boolean fetchAlertData() {
+  if (WiFi.status() != WL_CONNECTED) return 0;
 
   HTTPClient http;
   WiFiClient client;
@@ -301,7 +303,7 @@ void fetchAlertData() {
     int start = response.indexOf("\"pattern\":\"");
     if (start == -1) {
       http.end();
-      return;
+      return 0;
     }
 
     start += 11;
@@ -318,9 +320,10 @@ void fetchAlertData() {
       char c = pattern.charAt(i);
       alertStates[i] = (c == 'A') ? 1 : 0;
     }
-    if (alertStates[35]) DemoState = 0;
+    http.end();
+    return 1;
   }
-  http.end();
+  return 0;
 }
 
 // ---------- WiFi ----------
@@ -366,40 +369,43 @@ void fillCollor(uint8_t R, uint8_t G, uint8_t B) {
   strip.show();
 }
 
-void MapColorUpdate() {
-  for (int i = 0; i < LED_COUNT; i++) {
-    if (alertStates[ledMap[i]] == 1) {
-      strip.setPixelColor(i, 0xff0000);
-    } else {
-      strip.setPixelColor(i, 0x00ff00);
-    }
-  }
-  strip.show();
-}
-
-void showDemo() {
-  if (millis() - someTimer >= 10000) {
-    someTimer = millis();
-    for (int i = 0; i < REGIONS_COUNT; i++) {
-      alertStatedDemo[i] = random(0, 2);
-    }
+void MapColorUpdate(boolean mode) { // mode 0 - allgood, 1 - old data
+  if (!mode) {
+    brightness = BRIGHTNESS;
     for (int i = 0; i < LED_COUNT; i++) {
-      if (alertStatedDemo[ledMap[i]] == 1) {
-        strip.setPixelColor(i, 0xff0010);
+      if (alertStates[ledMap[i]] == 1) {
+        strip.setPixelColor(i, 0xff0000);
       } else {
-        strip.setPixelColor(i, 0x00ff10);
+        strip.setPixelColor(i, 0x00ff00);
+      }
+    }
+  } else {
+    for (int i = 0; i < LED_COUNT; i++) {
+      if (alertStates[ledMap[i]] == 1) {
+        strip.setPixelColor(i, 0xff0000);
+      } else {
+        strip.setPixelColor(i, 0xffff00);
       }
     }
   }
+  strip.setBrightness(brightness);
   strip.show();
 }
 
-void showSysState(){ //TODO: made this to show sys state
+void fade() {
+  static boolean fadeDir;
+  if (fadeTimer - millis() >= 100) {
+    fadeTimer = millis();
+    fadeDir ? brightness-- : brightness++;
+    if (brightness <= 1 || brightness >= 255) fadeDir = !fadeDir;
+  }
+  strip.setBrightness(brightness);
+  strip.show();
 }
 
 void setup() {
   strip.begin();
-  strip.setBrightness(255);
+  strip.setBrightness(brightness);
   fillCollor(0, 0, 255);
 
   readWiFiFromEEPROM();
@@ -422,23 +428,34 @@ void setup() {
       startSoftAP();
     }
   }
+  fadeTimer = millis();
 }
 
 void loop() {
   SysStateFetch();
-  if (NetState == 0) {
-    if (millis() - lastRequest >= REQUEST_INTERVAL) {
-      lastRequest = millis();
-      fetchAlertData();
-      MapColorUpdate();
-      /*
-      if (DemoState) {
-        showDemo();
-      } else MapColorUpdate();
-       */
-    }
-  } else if (NetState == 1) {
+  if (NetState == 1) {
     dnsserver.processNextRequest();
     server.handleClient();
   }
+
+  if (NetState == 0) {
+    if (millis() - lastRequest >= REQUEST_INTERVAL) {
+      lastRequest = millis();
+
+      if (fetchAlertData()) {
+        FetchErrCount = 0;
+        apiState = 1;
+        MapColorUpdate(0);
+      } else {
+        if (FetchErrCount < 5) {
+          FetchErrCount++;
+        } else {
+          apiState = 0;
+          MapColorUpdate(1);
+        }
+      }
+    }
+
+    if (!apiState) fade();
+  } 
 }
