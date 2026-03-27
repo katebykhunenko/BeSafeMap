@@ -17,12 +17,12 @@
 #define REGIONS_COUNT 130
 #define LED_COUNT 369
 #define REQUEST_INTERVAL 10000 // 10 секунд
-const char* alertServerUrl = "http://10.0.1.41:8000/data";
+const char* alertServerUrl = "http://10.89.214.177:8000/data";
 const char* ap_ssid = "BeSafeMap";
 const char* ap_password = "12345678";
 const byte DNS_PORT = 53;
 const uint8_t ledMap[LED_COUNT] = {
-  0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   103, 103, 103,
   118, 118, 118,
   117, 117, 117,
@@ -35,7 +35,7 @@ const uint8_t ledMap[LED_COUNT] = {
   26, 26, 26,
   21, 21,
   127, 127,
-  129, 129,
+  129,
   126, 126,
   128, 128, 128,
   24, 24,
@@ -93,14 +93,15 @@ const uint8_t ledMap[LED_COUNT] = {
   43, 43, 43, 43,
   46, 46,
   48, 48, 48,
-  123, 123, 123,
+  123, 123, 123, 123,
   76, 76,
   77, 77, 77, 77,
   122, 122, 122,
   120, 120, 120, 120,
   121, 121,
   6, 6,
-  4, 4, 4, 4,
+  4, 4, 4,
+  104, 104, 104, 104, 104,
   89, 89, 89,
   91, 91,
   59, 59,
@@ -118,7 +119,7 @@ const uint8_t ledMap[LED_COUNT] = {
   37, 37,
   108, 108,
   107, 107,
-  109, 109,
+  109, 109, 109,
   105, 105, 105, 105, 105, 105, 105,
   5, 5, 5,
   3, 3, 3, 3, 3, 3,
@@ -429,9 +430,12 @@ void loop() {
     if (millis() - lastRequest >= REQUEST_INTERVAL) {
       lastRequest = millis();
       fetchAlertData();
+      MapColorUpdate();
+      /*
       if (DemoState) {
         showDemo();
       } else MapColorUpdate();
+       */
     }
   } else if (NetState == 1) {
     dnsserver.processNextRequest();
