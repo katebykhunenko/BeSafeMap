@@ -18,7 +18,7 @@
 #define LED_COUNT 369
 #define REQUEST_INTERVAL 10000 // 10 секунд
 #define BRIGHTNESS 200
-const char* alertServerUrl = "http://192.168.0.145:8000/data";
+const char* alertServerUrl = "http://91.239.207.231:17312/data";
 const char* ap_ssid = "BeSafeMap";
 const char* ap_password = "12345678";
 const byte DNS_PORT = 53;
