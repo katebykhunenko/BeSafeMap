@@ -17,7 +17,7 @@
 #define REGIONS_COUNT 130
 #define LED_COUNT 12
 #define REQUEST_INTERVAL 10000 // 10 секунд
-const char* alertServerUrl = "http://10.0.1.41:8000/data";
+const char* alertServerUrl = "http://91.239.207.231:17312/data";
 const char* ap_ssid = "BeSafeMap";
 const char* ap_password = "12345678";
 const byte DNS_PORT = 53;
