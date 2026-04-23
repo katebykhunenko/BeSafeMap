@@ -326,7 +326,7 @@ boolean fetchAlertData() {
       if (alertStates[i] != PrevAlertStates[i]){
         blink_until[i] = now + 5000;
       }
-      PrevAlertStates[i] = alertStates;
+      PrevAlertStates[i] = alertStates[i];
     }
     http.end();
     return 1;
@@ -383,7 +383,7 @@ void MapColorUpdate(boolean mode) { // mode 0 - allgood, 1 - old data
   if (!mode) { // все норм данні актуальні
     brightness = BRIGHTNESS;
     for (int i = 0; i < LED_COUNT; i++) { // Цикл по всім діодам
-      if (now < blink_until[i]) { // якщо діод мигає
+      if (now < blink_until[ledMap[i]]) { // якщо діод мигає
         if ((now / 250) % 2 == 0) { // світится
           if (alertStates[ledMap[i]] == 1) { // тут або червоний або зелений
             strip.setPixelColor(i, 0xff0000);
