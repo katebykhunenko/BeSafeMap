@@ -18,6 +18,7 @@
 #define LED_COUNT 369
 #define REQUEST_INTERVAL 10000 // 10 секунд
 #define BRIGHTNESS 200
+#define BLINK_TIME 5000
 const char* alertServerUrl = "http://91.239.207.231:17312/data";
 const char* ap_ssid = "BeSafeMap";
 const char* ap_password = "12345678";
@@ -159,8 +160,9 @@ String wifiSSID;
 String wifiPassword;
 
 bool alertStates[REGIONS_COUNT];
-bool PrevAlertStates[REGIONS_COUNT];
-uint32_t blink_until[REGIONS_COUNT];
+bool prevAlertStates[REGIONS_COUNT];
+bool isBlinking[REGIONS_COUNT];
+uint32_t blinkStartTime = 0;
 uint32_t lastRequest = 0;
 uint32_t fadeTimer = 0;
 
@@ -301,7 +303,6 @@ boolean fetchAlertData() {
 
   if (httpCode == 200) {
     String response = http.getString();
-    uint32_t now = millis();
 
     int start = response.indexOf("\"pattern\":\"");
     if (start == -1) {
@@ -320,14 +321,14 @@ boolean fetchAlertData() {
     }
 
     for (int i = 0; i < len; i++) {
-      char c = pattern.charAt(i);
-      alertStates[i] = (c == 'A') ? 1 : 0;
+      prevAlertStates[i] = alertStates[i]; // зберегли останнє значення
 
-      if (alertStates[i] != PrevAlertStates[i]){
-        blink_until[i] = now + 5000;
-      }
-      PrevAlertStates[i] = alertStates[i];
+      char c = pattern.charAt(i);
+      alertStates[i] = (c == 'A') ? 1 : 0; // оновили данні в масиві
+
+      (alertStates[i] == prevAlertStates[i]) ? isBlinking[i] = 1 : isBlinking[i] = 0; // якщо данні змінилися то запам'ятали, якщо ті ж самі то забули
     }
+    blinkStartTime = millis();
     http.end();
     return 1;
   }
@@ -378,13 +379,13 @@ void fillCollor(uint8_t R, uint8_t G, uint8_t B) {
 }
 
 void MapColorUpdate(boolean mode) { // mode 0 - allgood, 1 - old data
-  uint32_t now = millis();
+  uint16_t blinkTime = millis() - blinkStartTime;
 
   if (!mode) { // все норм данні актуальні
     brightness = BRIGHTNESS;
     for (int i = 0; i < LED_COUNT; i++) { // Цикл по всім діодам
-      if (now < blink_until[ledMap[i]]) { // якщо діод мигає
-        if ((now / 250) % 2 == 0) { // світится
+      if ((blinkTime <= BLINK_TIME) && isBlinking[ledMap[i]]) { // якщо діод мигає і є час на мигання
+        if ((blinkTime / 250) % 2 == 0) { // світится
           if (alertStates[ledMap[i]] == 1) { // тут або червоний або зелений
             strip.setPixelColor(i, 0xff0000);
           } else {
