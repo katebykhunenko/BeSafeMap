@@ -24,7 +24,7 @@ const char* ap_ssid = "BeSafeMap";
 const char* ap_password = "12345678";
 const byte DNS_PORT = 53;
 const uint8_t ledMap[LED_COUNT] = {
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  129, 129, 129, 129, 129, 129, 129, 129, 129, 129, 129, 129,
   103, 103, 103,
   118, 118, 118,
   117, 117, 117,
