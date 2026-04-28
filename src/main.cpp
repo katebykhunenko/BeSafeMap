@@ -326,7 +326,7 @@ boolean fetchAlertData() {
       char c = pattern.charAt(i);
       alertStates[i] = (c == 'A') ? 1 : 0; // оновили данні в масиві
 
-      (alertStates[i] == prevAlertStates[i]) ? isBlinking[i] = 1 : isBlinking[i] = 0; // якщо данні змінилися то запам'ятали, якщо ті ж самі то забули
+      (alertStates[i] != prevAlertStates[i]) ? isBlinking[i] = 1 : isBlinking[i] = 0; // якщо данні змінилися то запам'ятали, якщо ті ж самі то забули
     }
     blinkStartTime = millis();
     http.end();
