@@ -169,7 +169,7 @@ uint32_t fadeTimer = 0;
 uint8_t SystemState;
 uint8_t NetState; // 0 - normal, 1 - AP/config, 2 - not connected, 3 - lost, 255 - fail
 uint8_t FetchErrCount = 0;
-boolean apiState = 1;
+boolean apiState = 0;
 
 ESP8266WebServer server(80);
 DNSServer dnsserver;
@@ -468,17 +468,21 @@ void loop() {
       if (fetchAlertData()) {
         FetchErrCount = 0;
         apiState = 1;
-        MapColorUpdate(0);
       } else {
         if (FetchErrCount < 5) {
           FetchErrCount++;
         } else {
           apiState = 0;
-          MapColorUpdate(1);
         }
       }
     }
 
-    if (!apiState) fade();
-  } 
+  }
+
+  if (apiState) {
+    MapColorUpdate(0);
+  } else {
+    MapColorUpdate(1);
+    fade();
+  }
 }
